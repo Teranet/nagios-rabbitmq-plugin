@@ -1,0 +1,133 @@
+#!/usr/bin/php
+<?php
+define("CRITICAL",10000);
+define("WARNING",5000);
+$queue='';
+$BASE_QUEUE_URL= "queues/%2F/";
+extract(getArgs($argv));
+if(!isset($host) || empty($host) || !isset($port) || empty($port) || !isset($username) || empty($username) || !isset($password) || empty($password) ){ help();die();}
+$BASE_URL = "http://$host:$port/api/";
+if(isset($queue) && !empty($queue)){
+$URL = $BASE_URL.$BASE_QUEUE_URL.$queue;
+}else{
+$URL = $BASE_URL.$BASE_QUEUE_URL;
+}
+$rawArray = json_decode(callMQ($URL,$username,$password),TRUE);
+$processedData=processingData($rawArray,$queue);
+response($processedData);
+function response($array){
+$queues_c ="";
+$queues_w ="";
+$queues_o ="";
+foreach($array as $queue){
+if($queue['messages'] > CRITICAL){
+$queues_c.=$queue['queue']." HAS: ".$queue['messages']." | ";
+}else if($queue['messages'] > WARNING){
+$queues_w.=$queue['queue']." HAS: ".$queue['messages']." | ";
+}
+$queues_o.=$queue['queue']." HAS: ".$queue['messages']." | ";
+}
+if(!empty($queues_c)){
+echo "CRITICAL::QUEUES Above ".CRITICAL." --> " .$queues_c;
+exit(2);
+}else if (!empty($queues_w)){
+echo "WARNING::QUEUES Above ".WARNING." --> " .$queues_w;
+exit(1);
+}else{
+echo "All queues are OK";
+exit(0);
+}
+
+}
+function processingData($array,$queue=''){
+$resource = array();
+if(empty($queue)){
+foreach($array as $queueData){
+$messages = $queueData['messages'];
+$name = $queueData['name'];
+$consumers = $queueData['consumers'];
+$messages_unacknowledged = $queueData['messages_unacknowledged'];
+if($messages > 0){
+$publish_details_rate = $queueData['message_stats']['publish_details']['rate'];
+$deliver_details_rate ="";
+if(isset( $queueData['message_stats']['deliver_details'])){
+$deliver_details_rate = $queueData['message_stats']['deliver_details']['rate'];
+}
+$idle_since = "";
+}else{
+$idle_since = $queueData['idle_since'];
+$publish_details_rate = "";
+$deliver_details_rate = "";
+}
+$resource[]=array(
+'publish_rate'=>$publish_details_rate,
+'deliver_rate'=>$deliver_details_rate,
+'queue'=>$name,
+'consumers'=>$consumers,
+'messages'=>$messages,
+'unacknoledged'=>$messages_unacknowledged,
+'idle_since'=>$idle_since
+);
+}
+}else{
+
+$messages = $array['messages'];
+$name = $array['name'];
+$consumers = $array['consumers'];
+$messages_unacknowledged = $array['messages_unacknowledged'];
+if($messages >0){
+$publish_details_rate = $array['message_stats']['publish_details']['rate'];
+$deliver_details_rate = $array['message_stats']['deliver_details']['rate'];
+$idle_since = "";
+}else{
+$idle_since = $array['idle_since'];
+$publish_details_rate = "";
+$deliver_details_rate = "";
+}
+$resource[] = array(
+'publish_rate'=>$publish_details_rate,
+'deliver_rate'=>$deliver_details_rate,
+'queue'=>$name,
+'consumers'=>$consumers,
+'messages'=>$messages,
+'unacknoledged'=>$messages_unacknowledged,
+'idle_since'=>$idle_since
+
+);
+}
+return $resource;
+}
+function help(){
+echo "========================SIMPLE RABBITMQ NAGIOS PLUGIN================================\n ==========================Author Kaburu kevin ======================== \n \n./check_mq host=127.0.0.1 port=15672 username=guest password=guest  \n./check_mq host=127.0.0.1 port=15672 username=guest password=guest queue=TEST  [used to check specific queue]\n";
+}
+function getArgs($args){
+foreach ($args as $arg) {
+         $e=explode("=",$arg);
+        if(count($e)==2)
+            $_GET[$e[0]]=$e[1];
+        else   
+            $_GET[]=$e[0];
+    }
+$data = $_GET;
+unset($data[0]);
+return $data;
+}
+
+function callMQ($url,$username,$password){
+$ch = curl_init();
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_USERPWD, "$username:$password");
+curl_setopt($ch, CURLOPT_HTTPAUTH, CURLAUTH_BASIC);
+$output = curl_exec($ch);
+$info = curl_getinfo($ch);
+if(curl_error($ch)){
+    echo 'error: MQ has gone away. '.$url." CAN not be reached";
+   exit(2);
+}
+curl_close($ch);
+return $output;
+}
+?>
+
+
