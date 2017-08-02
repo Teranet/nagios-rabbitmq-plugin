@@ -1,7 +1,5 @@
 # nagios-rabbitmq-plugin
 Simple php utility script for monitoring rabbitmq  using nagios.
-Author: Kaburu 
-Email : mbaya at kelvin dot gmail dot com
 Installation 
 ==================================================================
 1.  Download the script into your nagios plugin directory ie: /usr/lib64/nagios/plugins/
@@ -10,12 +8,14 @@ Installation
 
 3.  Add the new command to your nagios server command.cnf file
 
-4. Create the services on client.cnf from your nagios server 
+4. Create the servicea on .cnf from your nagios server 
 
 
 ====================================================================
-a. You might need to change the processor to point the right php on your server
+a. It is very basic, feel free to modify it to fit your needs
 
-b. It is very basic, feel free to modify it to fit your needs
+====================================================================
+
+This script basically lists all the queues on the mq server and checks the number of messages on each. 
 
 
