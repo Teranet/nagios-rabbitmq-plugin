@@ -11,11 +11,10 @@ Installation
 4. Create the servicea on .cnf from your nagios server 
 
 
-====================================================================
+==================================================================
 a. It is very basic, feel free to modify it to fit your needs
 
-====================================================================
-
+==================================================================
 This script basically lists all the queues on the mq server and checks the number of messages on each. 
 
 
